@@ -1,92 +1,95 @@
 const fs = require("fs");
 const path = require("path");
+const { promises: fsPromises } = fs;
+const contactsPath = path.join(__dirname, "/db/contacts.json");
 
-const contactsPath = path.resolve("./db/contacts.json");
+function _getFileData() {
+  return fsPromises
+    .readFile(contactsPath, "utf-8")
+    .then((data) => JSON.parse(data))
+    .catch((err) => err);
+}
+function _randomInteger(min = 0, max = 99) {
+  let rand = min - 0.5 + Math.random() * (max - min + 1);
+  return Math.round(rand);
+}
+function listContacts(req, resp) {
+  _getFileData()
+    .then((data) => {
+      resp.send(data);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
 
-function listContacts() {
-  fs.readFile(contactsPath, "utf-8", (error, data) => {
-    if (error) {
-      return console.log(error);
-    }
+function getContactById({ req, resp, contactId }) {
+  _getFileData()
+    .then((data) => {
+      const contact = data.find((item) => item.id == contactId);
+      if (contact) {
+        resp.send(contact);
+      } else {
+        resp.status(404).send({ message: "Not found" });
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
 
-    const contacts = JSON.parse(data);
-    console.log("List of contacts: ");
-    console.table(contacts);
+function removeContact({ resp, contactId }) {
+  _getFileData()
+    .then((data) => {
+      const contact = data.find((item) => item.id == contactId);
+      if (!contact) {
+        resp.status(404).send({ message: "Not found" });
+      }
+      const filteredContacts = data.filter((item) => item.id != contactId);
+      fsPromises
+        .writeFile(contactsPath, JSON.stringify(filteredContacts, "", 2))
+        .then(() => {
+          resp.status(200).send({ message: "contact deleted" });
+        });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
+
+function addContact({ name, email, phone, resp }) {
+  _getFileData().then((data) => {
+    const contact = {
+      id: _randomInteger(),
+      name,
+      email,
+      phone,
+    };
+    data.push(contact);
+    fsPromises
+      .writeFile(contactsPath, JSON.stringify(data, "", 2))
+      .then(() => {
+        resp.status(201).send(contact);
+      })
+      .catch((err) => {
+        resp.send(err);
+      });
   });
 }
 
-function getContactById(contactId) {
-  fs.readFile(contactsPath, "utf-8", (error, data) => {
-    if (error) {
-      return console.log(error);
+function updateContact({ req, resp, id }) {
+  _getFileData().then((data) => {
+    const contact = data.findIndex((item) => item.id == id);
+    if (contact == -1) {
+      resp.status(404).send({ message: "Not found" });
+    } else {
+      Object.assign(data[contact], { ...req.body });
+      fsPromises
+        .writeFile(contactsPath, JSON.stringify(data, null, 2))
+        .then(() => {
+          resp.send(data[contact]);
+        });
     }
-
-    const contacts = JSON.parse(data);
-
-    const contact = contacts.find((contact) => {
-      if (contact.id === contactId) {
-        console.log(`Get contact by ID ${contactId}:`);
-        console.table(contact);
-        return contact;
-      }
-    });
-
-    if (contact == null) {
-      console.log(`Contact with ID "${contactId}" not found!`);
-    }
-  });
-}
-
-function removeContact(contactId) {
-  fs.readFile(contactsPath, "utf-8", (error, data) => {
-    if (error) {
-      return console.log(error);
-    }
-
-    const contacts = JSON.parse(data);
-    const newContact = contacts.filter((contact) => contact.id !== contactId);
-
-    if (newContact.length === contacts.length) {
-      console.log(
-        `Contact with ID "${contactId}" don't removed! ID "${contactId}" not found!`
-      );
-      return;
-    }
-
-    console.log("Contact deleted successfully! New list of contacts: ");
-    console.table(newContact);
-
-    fs.writeFile(contactsPath, JSON.stringify(newContact), (error) => {
-      if (error) {
-        return console.log("error :", error);
-      }
-    });
-  });
-}
-
-function addContact(name, email, phone) {
-  fs.readFile(contactsPath, "utf-8", (error, data) => {
-    if (error) {
-      return console.log(error);
-    }
-
-    const contacts = JSON.parse(data);
-
-    contacts.push({
-      id: contacts.length + 1,
-      name: name,
-      email: email,
-      phone: phone,
-    });
-
-    console.log("Contacts added successfully! New lists of contacts: ");
-    console.table(contacts);
-
-    fs.writeFile(contactsPath, JSON.stringify(contacts), (error) => {
-      if (error) {
-        return console.log(error);
-      }
-    });
   });
 }
 
@@ -95,4 +98,5 @@ module.exports = {
   getContactById,
   removeContact,
   addContact,
+  updateContact,
 };
