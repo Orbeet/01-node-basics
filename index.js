@@ -1,28 +1,72 @@
+const express = require("express");
+const cors = require("cors");
+const Joi = require("joi");
 const contacts = require("./contacts.js");
-const argv = require("yargs").argv;
 
-function invokeAction({ action, id, name, email, phone }) {
-  switch (action) {
-    case "list":
-      contacts.listContacts();
+const app = express();
+const PORT = 3000;
 
-      break;
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+app.use(express.urlencoded());
 
-    case "get":
-      contacts.getContactById(id);
-      break;
+app.get("/", function (req, resp) {
+  resp.send("Hello World");
+});
+app.get("/api/contacts", (req, resp) => {
+  contacts.listContacts(req, resp);
+});
+app.get("/api/contacts/:contactId", (req, resp) => {
+  contacts.getContactById({ req, resp, contactId: req.params.contactId });
+});
 
-    case "add":
-      contacts.addContact(name, email, phone);
-      break;
-
-    case "remove":
-      contacts.removeContact(id);
-      break;
-
-    default:
-      console.warn("\x1B[31m Unknown action type!");
+app.post(
+  "/api/contacts",
+  (req, resp, next) => {
+    const validationContact = Joi.object({
+      name: Joi.string().required(),
+      email: Joi.string().required(),
+      phone: Joi.string().required(),
+    });
+    const validationResult = Joi.validate(req.body, validationContact);
+    if (validationResult.error) {
+      resp.status(400).send(validationResult.error.details[0].message);
+    } else {
+      next();
+    }
+  },
+  (req, resp) => {
+    contacts.addContact({ ...req.body, resp });
   }
-}
+);
 
-invokeAction(argv);
+app.delete("/api/contacts/:contactId", (req, resp) => {
+  const contactId = req.params.contactId;
+  contacts.removeContact({ resp, contactId });
+});
+
+app.patch(
+  "/api/contacts/:contactId",
+  (req, resp, next) => {
+    const validationContact = Joi.object({
+      name: Joi.string(),
+      email: Joi.string(),
+      phone: Joi.string(),
+    });
+    const validationResult = Joi.validate(req.body, validationContact);
+    if (validationResult.error) {
+      resp.status(400).send(validationResult.error.details[0].message);
+    } else {
+      next();
+    }
+  },
+  (req, resp) => {
+    const id = req.params.contactId;
+    contacts.updateContact({ req, resp, id });
+  }
+);
+
+app.listen(PORT, () => {
+  console.log("started at ", PORT);
+});
