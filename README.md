@@ -1,4 +1,4 @@
-npm i express morgan cors joi
+npm i express morgan cors joi mongodb mongoose dotenv @hapi/joi
 
 http://localhost:3000
 
