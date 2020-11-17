@@ -1,14 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const userRouter = require("./users/user.router");
-
+const contactsRouter = require("./contacts/contact.router");
 require("dotenv").config();
 
-// const PORT = 3000;
-// const MONGODB_URL =
-//   "mongodb+srv://test_admin:b7YrGuCRZRCP1TDZ@03-mongodb.o01mu.mongodb.net/db-contacts?retryWrites=true&w=majority";
-
-module.exports = class UserServer {
+module.exports = class ContactsServer {
   constructor() {
     this.server = null;
   }
@@ -28,20 +23,34 @@ module.exports = class UserServer {
   initMiddlewares() {
     this.server.use(express.json());
   }
-
   initRoutes() {
-    this.server.use("/users", userRouter);
+    this.server.use("/api/contacts", contactsRouter);
   }
 
   async initDatabase() {
-    await mongoose.connect(process.env.MONGODB_URL);
+    mongoose.set("useCreateIndex", true);
+    await mongoose.connect(
+      process.env.MONGODB_URL,
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        useFindAndModify: true,
+      },
+      (err) => {
+        if (err) {
+          console.log("err");
+          process.exit(1);
+        }
+        console.log("Database connection successful");
+      }
+    );
   }
 
   startListening() {
     const PORT = process.env.PORT;
 
     this.server.listen(PORT, () => {
-      console.log("Server started listening on port", PORT);
+      console.log("Server listening on port", PORT);
     });
   }
 };
