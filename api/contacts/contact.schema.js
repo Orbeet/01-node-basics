@@ -15,6 +15,8 @@ contactSchema.statics.getAllContacts = getAllContacts;
 contactSchema.statics.updateContact = updateContact;
 contactSchema.statics.getContactById = getContactById;
 contactSchema.statics.deleteContact = deleteContact;
+contactSchema.statics.findByEmail = findByEmail;
+// contactSchema.statics.findContactByIdAndUpdate = findContactByIdAndUpdate;
 
 async function createContact(contactParams) {
   return this.create(contactParams);
@@ -41,5 +43,19 @@ async function updateContact(contactId, contactParams) {
 async function deleteContact(contactId) {
   return this.findByIdAndDelete(contactId);
 }
-const contactModel = mongoose.model("Contacts", contactSchema);
+
+async function findByEmail(email) {
+  return this.findOne({ email });
+}
+
+// async function findContactByIdAndUpdate(contactId, updaeParams) {
+//   return this.findByIdAndUpdate(
+//     contactId,
+//     { $set: updaeParams },
+//     { new: true }
+//   );
+// }
+
+const contactModel = mongoose.model("contact", contactSchema);
+
 module.exports = contactModel;

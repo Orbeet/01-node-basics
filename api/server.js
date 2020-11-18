@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const userRouter = require("./users/userRouter");
 const contactsRouter = require("./contacts/contact.router");
+
 require("dotenv").config();
 
 module.exports = class ContactsServer {
@@ -11,6 +13,7 @@ module.exports = class ContactsServer {
   async start() {
     this.initServer();
     this.initMiddlewares();
+    this.initUserRoutes();
     this.initRoutes();
     await this.initDatabase();
     this.startListening();
@@ -23,10 +26,12 @@ module.exports = class ContactsServer {
   initMiddlewares() {
     this.server.use(express.json());
   }
+  initUserRoutes() {
+    this.server.use("/api/user", userRouter);
+  }
   initRoutes() {
     this.server.use("/api/contacts", contactsRouter);
   }
-
   async initDatabase() {
     mongoose.set("useCreateIndex", true);
     await mongoose.connect(
