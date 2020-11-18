@@ -1,7 +1,5 @@
 npm i express morgan cors joi mongodb mongoose dotenv @hapi/joi
 
-http://localhost:3000
-
 **Читать на других языках: [Русский](README.md), [Українська](README.ua.md).**
 
 # Домашнее задание 3
