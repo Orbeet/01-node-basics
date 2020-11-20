@@ -1,72 +1,59 @@
 const express = require("express");
 const cors = require("cors");
-const Joi = require("joi");
-const contacts = require("./contacts.js");
+const morgan = require("morgan");
+const mongoose = require("mongoose");
+const getContacts = require("./routing/getContacts");
+const editContacts = require("./routing/editContacts");
+require("dotenv").config();
 
-const app = express();
-const PORT = 3000;
+//--- mongodb atlas ------
+// test_admin
+// b7YrGuCRZRCP1TDZ
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public"));
-app.use(express.urlencoded());
+// mongodb+srv://test_admin:b7YrGuCRZRCP1TDZ@03-mongodb.o01mu.mongodb.net/db-contacts?retryWrites=true&w=majority
 
-app.get("/", function (req, resp) {
-  resp.send("Hello World");
-});
-app.get("/api/contacts", (req, resp) => {
-  contacts.listContacts(req, resp);
-});
-app.get("/api/contacts/:contactId", (req, resp) => {
-  contacts.getContactById({ req, resp, contactId: req.params.contactId });
-});
+const URLdb = process.env.URLdb;
+const PORT = process.env.PORT;
 
-app.post(
-  "/api/contacts",
-  (req, resp, next) => {
-    const validationContact = Joi.object({
-      name: Joi.string().required(),
-      email: Joi.string().required(),
-      phone: Joi.string().required(),
-    });
-    const validationResult = Joi.validate(req.body, validationContact);
-    if (validationResult.error) {
-      resp.status(400).send(validationResult.error.details[0].message);
-    } else {
-      next();
-    }
-  },
-  (req, resp) => {
-    contacts.addContact({ ...req.body, resp });
+module.exports = class myMongoDBServer {
+  constructor() {
+    this.server = null;
   }
-);
-
-app.delete("/api/contacts/:contactId", (req, resp) => {
-  const contactId = req.params.contactId;
-  contacts.removeContact({ resp, contactId });
-});
-
-app.patch(
-  "/api/contacts/:contactId",
-  (req, resp, next) => {
-    const validationContact = Joi.object({
-      name: Joi.string(),
-      email: Joi.string(),
-      phone: Joi.string(),
-    });
-    const validationResult = Joi.validate(req.body, validationContact);
-    if (validationResult.error) {
-      resp.status(400).send(validationResult.error.details[0].message);
-    } else {
-      next();
-    }
-  },
-  (req, resp) => {
-    const id = req.params.contactId;
-    contacts.updateContact({ req, resp, id });
+  async start() {
+    this.initServer();
+    this.initMiddlewares();
+    this.initRoutes();
+    await this.initDataBase();
+    this.startListening();
   }
-);
-
-app.listen(PORT, () => {
-  console.log("started at ", PORT);
-});
+  initServer = () => {
+    this.server = express();
+  };
+  initMiddlewares = () => {
+    this.server.use(express.json());
+    this.server.use(express.urlencoded({ extended: true }));
+    this.server.use(cors());
+    this.server.use(morgan("combined"));
+  };
+  initRoutes = () => {
+    this.server.use("/contacts", getContacts);
+    this.server.use("/contacts", editContacts);
+  };
+  initDataBase = async () => {
+    try {
+      await mongoose.connect(URLdb, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log("Database connection successful");
+    } catch (error) {
+      console.log("Connecting error:", error.message);
+      process.exit(1);
+    }
+  };
+  startListening = () => {
+    this.server.listen(PORT, () => {
+      console.log("myMongoDBServer listening on port:", PORT);
+    });
+  };
+};
