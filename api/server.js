@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const mongoose = require("mongoose");
 const userRouter = require("./users/userRouter");
 const contactsRouter = require("./contacts/contact.router");
@@ -25,6 +26,9 @@ module.exports = class ContactsServer {
 
   initMiddlewares() {
     this.server.use(express.json());
+    // this.server.use(express.static("public"));
+    this.server.use("/images", express.static("public/images")); // add
+    this.server.use(cors({ origin: `http://localhost:${process.env.PORT}` }));
   }
   initUserRoutes() {
     this.server.use("/api/user", userRouter);

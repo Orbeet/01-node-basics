@@ -2,12 +2,14 @@ const bcriptjs = require("bcrypt");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const usersModel = require("./user.schema");
+const { imageMini } = require("./user.helper");
 const { UnauthorizedError } = require("../helpers/errors.constructor");
 
 module.exports = class userController {
   get createUser() {
     return this._createUser.bind(this);
   }
+
   static async _createUser(req, res, next) {
     try {
       const _constFactor = 4;
@@ -17,13 +19,16 @@ module.exports = class userController {
       if (existingUser) {
         res.status(409).send("Email in use");
       }
+
       const user = await usersModel.create({
         email,
         password: passwordHash,
+        avatarURL: "http://localhost:3000/images/" + req.file.filename,
       });
       return res.status(201).json({
         id: user._id,
         email: user.email,
+        avatarURL: user.avatarURL,
         token: user.token,
       });
     } catch (err) {
@@ -54,7 +59,7 @@ module.exports = class userController {
         return res.status(401).send("Authentication failed");
       }
       const token = await jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: 172800,
+        expiresIn: "2d",
       });
       await usersModel.updateToken(user._id, token);
       return res.status(200).json({ token });
@@ -118,5 +123,17 @@ module.exports = class userController {
       return res.status(400).send(validateRezult.error);
     }
     next();
+  }
+
+  static async createUserAvatar(req, res, next) {
+    try {
+      await imageMini(req, res, next);
+      console.log(req.file);
+      return res.status(200).json({
+        avatarURL: `http://localhost:3000/public/images/${req.file.filename}`,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 };
